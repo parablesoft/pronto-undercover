@@ -30,7 +30,7 @@ module Pronto
     def each_changed_line
       @patches.each do |patch|
         patch.added_lines.each do |line|
-          yield patch.delta.new_file[:path].to_s, line.new_lineno
+          yield File.expand_path(patch.delta.new_file[:path].to_s), line.new_lineno
         end
       end
     end

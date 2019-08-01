@@ -42,9 +42,16 @@ module Pronto
           .select { |line| line.new_lineno == msg_line_no }
           .map do |line|
             lines = untested_lines_for(warning)
+            line_message =
+              if lines == :all
+                "for all lines"
+              else
+                "for line#{'s' if lines.size > 1} #{lines.join(', ')}"
+              end
+
             path = line.patch.delta.new_file[:path]
             msg = "#{warning.node.human_name} #{warning.node.name} missing tests" \
-                  " for line#{'s' if lines.size > 1} #{lines.join(', ')}" \
+                  " #{line_message}" \
                   " (coverage: #{warning.coverage_f})"
             Message.new(path, line, DEFAULT_LEVEL, msg, nil, self.class)
           end
@@ -62,7 +69,7 @@ module Pronto
       patch_lines = patch.added_lines.map(&:new_lineno)
       path = patch.new_file_full_path.to_s
       undercover_warnings
-        .select { |warning| File.expand_path("api/" + warning.file_path) == path }
+        .select { |warning| File.expand_path(warning.file_path) == path }
         .map do |warning|
           first_line_no = patch_lines.find { |l| warning.uncovered?(l) }
           [warning, first_line_no] if first_line_no
@@ -70,6 +77,7 @@ module Pronto
     end
 
     def untested_lines_for(warning)
+      return :all unless warning.has_coverage?
       warning.coverage.map do |ln, _cov|
         ln if warning.uncovered?(ln)
       end.compact
